@@ -1,0 +1,291 @@
+basePath: /
+definitions:
+  model.Menu:
+    properties:
+      calories:
+        type: integer
+      category:
+        type: string
+      created_at:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      ingredients:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+      updated_at:
+        type: string
+    type: object
+  model.PaginationResponse:
+    properties:
+      data: {}
+      page:
+        type: integer
+      per_page:
+        type: integer
+      total:
+        type: integer
+      total_pages:
+        type: integer
+    type: object
+  model.RecommendationRequest:
+    properties:
+      preference:
+        type: string
+    required:
+    - preference
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API for Menu Management
+  title: Menu API
+  version: "1.0"
+paths:
+  /menu:
+    get:
+      description: Get menu list with pagination, filtering, and sorting
+      parameters:
+      - description: Search by name or description
+        in: query
+        name: q
+        type: string
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      - description: Minimum price
+        in: query
+        name: min_price
+        type: number
+      - description: Maximum price
+        in: query
+        name: max_price
+        type: number
+      - description: Maximum calories
+        in: query
+        name: max_cal
+        type: integer
+      - description: Sort by field (e.g., price:asc)
+        in: query
+        name: sort
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 10)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.PaginationResponse'
+      summary: List all menus
+      tags:
+      - menu
+    post:
+      consumes:
+      - application/json
+      description: Create a new menu item with ingredients
+      parameters:
+      - description: Menu Request
+        in: body
+        name: menu
+        required: true
+        schema:
+          $ref: '#/definitions/model.Menu'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Menu'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a new menu
+      tags:
+      - menu
+  /menu/{id}:
+    delete:
+      description: Delete a menu item by ID
+      parameters:
+      - description: Menu ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete menu
+      tags:
+      - menu
+    get:
+      description: Get details of a specific menu item by ID
+      parameters:
+      - description: Menu ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get menu detail
+      tags:
+      - menu
+    put:
+      consumes:
+      - application/json
+      description: Update an existing menu item
+      parameters:
+      - description: Menu ID
+        in: path
+        name: id
+        required: true
+        type: integer
+      - description: Update Data
+        in: body
+        name: menu
+        required: true
+        schema:
+          $ref: '#/definitions/model.Menu'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update menu
+      tags:
+      - menu
+  /menu/ai/generate-description:
+    post:
+      consumes:
+      - application/json
+      description: Use Gemini AI to create a marketing description based on name and
+        ingredients
+      parameters:
+      - description: 'JSON input: {name: string, ingredients: []string}'
+        in: body
+        name: input
+        required: true
+        schema:
+          additionalProperties: true
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Generate Menu Description (AI)
+      tags:
+      - ai
+  /menu/group-by-category:
+    get:
+      description: Get menu counts or lists grouped by category
+      parameters:
+      - description: 'Mode: ''count'' or ''list'''
+        in: query
+        name: mode
+        required: true
+        type: string
+      - description: Limit item per category (default 5)
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Group menus by category
+      tags:
+      - menu
+  /menu/recommend:
+    post:
+      consumes:
+      - application/json
+      description: Get menu recommendations based on user preference using Gemini
+        AI
+      parameters:
+      - description: User Preference
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RecommendationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: AI Menu Recommendation
+      tags:
+      - menu
+swagger: "2.0"

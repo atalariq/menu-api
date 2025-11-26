@@ -1,0 +1,36 @@
+# fly.toml app configuration file generated for atalariq-menu-api on 2025-11-27T00:31:17+07:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'atalariq-menu-api'
+primary_region = 'sin'
+
+[build]
+  dockerfile = "Dockerfile"
+
+  [build.args]
+    GO_VERSION = '1.25.4'
+
+[mounts]
+  source = "menu_data"    # Nama volume yang kita create di langkah 3
+  destination = "/data"   # Folder tujuan di dalam Linux Container
+
+[env]
+  # Kita beritahu aplikasi untuk menyimpan DB di dalam volume
+  DB_PATH = "/data/menu.db" 
+  GIN_MODE = "release"
+  PORT = '8080'
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ['app']
+
+[[vm]]
+  memory = '1gb'
+  cpu_kind = 'shared'
+  cpus = 1
