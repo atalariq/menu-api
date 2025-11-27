@@ -1,12 +1,25 @@
 {
+    "consumes": [
+        "application/json"
+    ],
+    "produces": [
+        "application/json"
+    ],
+    "schemes": [
+        "http",
+        "https"
+    ],
     "swagger": "2.0",
     "info": {
         "description": "API for Menu Management",
         "title": "Menu API",
-        "contact": {},
+        "contact": {
+            "name": "Atalariq (Author)",
+            "email": "atalariq.dev@outlook.com"
+        },
         "version": "1.0"
     },
-    "host": "localhost:8080",
+    "host": "atalariq-menu-api.fly.dev",
     "basePath": "/",
     "paths": {
         "/menu": {
@@ -120,7 +133,7 @@
                 }
             }
         },
-        "/menu/ai/generate-description": {
+        "/menu/generate-description": {
             "post": {
                 "description": "Use Gemini AI to create a marketing description based on name and ingredients",
                 "consumes": [
@@ -174,7 +187,7 @@
                     "application/json"
                 ],
                 "tags": [
-                    "menu"
+                    "ai"
                 ],
                 "summary": "Group menus by category",
                 "parameters": [
@@ -203,7 +216,7 @@
                 }
             }
         },
-        "/menu/recommend": {
+        "/menu/recommendations": {
             "post": {
                 "description": "Get menu recommendations based on user preference using Gemini AI",
                 "consumes": [

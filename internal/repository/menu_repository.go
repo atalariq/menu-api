@@ -18,7 +18,7 @@ type MenuRepository interface {
 	FindByID(id uint) (model.Menu, error)
 	Update(menu *model.Menu) error
 	Delete(id uint) error
-	GroupBy(mode string, limit int) (interface{}, error)
+	GroupBy(mode string, limit int) (any, error)
 }
 
 type menuRepository struct {
@@ -100,7 +100,7 @@ func (r *menuRepository) Delete(id uint) error {
 	return r.db.Delete(&model.Menu{}, id).Error
 }
 
-func (r *menuRepository) GroupBy(mode string, limit int) (interface{}, error) {
+func (r *menuRepository) GroupBy(mode string, limit int) (any, error) {
 	if mode == "count" {
 		type Result struct {
 			Category string

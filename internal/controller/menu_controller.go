@@ -97,7 +97,7 @@ func (c *MenuController) FindAll(ctx *gin.Context) {
 // @Tags         menu
 // @Produce      json
 // @Param        id   path      int  true  "Menu ID"
-// @Success      200  {object}  map[string]interface{}
+// @Success      200  {object}  map[string]any
 // @Failure      404  {object}  map[string]string
 // @Router       /menu/{id} [get]
 func (c *MenuController) GetByID(ctx *gin.Context) {
@@ -125,7 +125,7 @@ func (c *MenuController) GetByID(ctx *gin.Context) {
 // @Produce      json
 // @Param        id   path      int  true  "Menu ID"
 // @Param        menu body model.Menu true "Update Data"
-// @Success      200  {object}  map[string]interface{}
+// @Success      200  {object}  map[string]any
 // @Failure      404  {object}  map[string]string
 // @Router       /menu/{id} [put]
 func (c *MenuController) Update(ctx *gin.Context) {
@@ -179,11 +179,11 @@ func (c *MenuController) Delete(ctx *gin.Context) {
 // GroupByCategory godoc
 // @Summary      Group menus by category
 // @Description  Get menu counts or lists grouped by category
-// @Tags         menu
+// @Tags         ai
 // @Produce      json
 // @Param        mode query string true "Mode: 'count' or 'list'"
 // @Param        limit query int false "Limit item per category (default 5)"
-// @Success      200  {object}  map[string]interface{}
+// @Success      200  {object}  map[string]any
 // @Router       /menu/group-by-category [get]
 func (c *MenuController) GroupByCategory(ctx *gin.Context) {
 	limit, err := strconv.Atoi(ctx.Query("per_category"))
@@ -212,10 +212,10 @@ func (c *MenuController) GroupByCategory(ctx *gin.Context) {
 // @Tags         ai
 // @Accept       json
 // @Produce      json
-// @Param        input body map[string]interface{} true "JSON input: {name: string, ingredients: []string}"
+// @Param        input body map[string]any true "JSON input: {name: string, ingredients: []string}"
 // @Success      200  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
-// @Router       /menu/ai/generate-description [post]
+// @Router       /menu/generate-description [post]
 func (c *MenuController) GenerateDescription(ctx *gin.Context) {
 	var input struct {
 		Name        string   `json:"name"`
@@ -226,7 +226,7 @@ func (c *MenuController) GenerateDescription(ctx *gin.Context) {
 		return
 	}
 
-	desc, err := c.service.GenerateDescriptionAI(input.Name, input.Ingredients)
+	desc, err := c.service.GenerateDescription(input.Name, input.Ingredients)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": "AI Service Error: " + err.Error()})
 		return
@@ -237,7 +237,7 @@ func (c *MenuController) GenerateDescription(ctx *gin.Context) {
 	})
 }
 
-// GetRecommendation godoc
+// GetRecommendations godoc
 // @Summary      AI Menu Recommendation
 // @Description  Get menu recommendations based on user preference using Gemini AI
 // @Tags         menu
@@ -246,23 +246,21 @@ func (c *MenuController) GenerateDescription(ctx *gin.Context) {
 // @Param        request body model.RecommendationRequest true "User Preference"
 // @Success      200  {object}  map[string]string
 // @Failure      500  {object}  map[string]string
-// @Router       /menu/recommend [post]
-func (c *MenuController) GetRecommendation(ctx *gin.Context) {
-	var req model.RecommendationRequest
-	if err := ctx.ShouldBindJSON(&req); err != nil {
+// @Router       /menu/recommendations [post]
+func (c *MenuController) GetRecommendations(ctx *gin.Context) {
+	var request model.RecommendationRequest
+	if err := ctx.ShouldBindJSON(&request); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	recommendation, err := c.service.GetRecommendationAI(req.Preference)
+	recommendations, err := c.service.GetRecommendations(request)
 	if err != nil {
 		ctx.JSON(http.StatusBadGateway, gin.H{"error": "AI Service unavailable: " + err.Error()})
 		return
 	}
 
 	ctx.JSON(http.StatusOK, gin.H{
-		"data": gin.H{
-			"recommendation": recommendation,
-		},
+		"recommendations": recommendations,
 	})
 }

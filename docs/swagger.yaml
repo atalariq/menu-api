@@ -1,4 +1,6 @@
 basePath: /
+consumes:
+- application/json
 definitions:
   model.Menu:
     properties:
@@ -42,9 +44,11 @@ definitions:
     required:
     - preference
     type: object
-host: localhost:8080
+host: atalariq-menu-api.fly.dev
 info:
-  contact: {}
+  contact:
+    email: atalariq.dev@outlook.com
+    name: Atalariq (Author)
   description: API for Menu Management
   title: Menu API
   version: "1.0"
@@ -201,7 +205,7 @@ paths:
       summary: Update menu
       tags:
       - menu
-  /menu/ai/generate-description:
+  /menu/generate-description:
     post:
       consumes:
       - application/json
@@ -256,8 +260,8 @@ paths:
             type: object
       summary: Group menus by category
       tags:
-      - menu
-  /menu/recommend:
+      - ai
+  /menu/recommendations:
     post:
       consumes:
       - application/json
@@ -288,4 +292,9 @@ paths:
       summary: AI Menu Recommendation
       tags:
       - menu
+produces:
+- application/json
+schemes:
+- http
+- https
 swagger: "2.0"

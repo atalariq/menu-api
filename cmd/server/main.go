@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"os"
 
 	"atalariq/menu-api/internal/controller"
@@ -22,8 +23,13 @@ import (
 // @title           Menu API
 // @version         1.0
 // @description     API for Menu Management
-// @host            localhost:8080
+// @host            atalariq-menu-api.fly.dev
 // @BasePath        /
+// @schemes         http https
+// @accept          json
+// @produce         json
+// @contact.name    Atalariq (Author)
+// @contact.email   atalariq.dev@outlook.com
 func main() {
 	port := os.Getenv("PORT")
 
@@ -44,13 +50,22 @@ func main() {
 
 	// 2. Dependency Injection
 	menuRepository := repository.NewMenuRepository(db)
-	menuService := service.NewMenuService(menuRepository)
+	geminiService := service.NewGeminiService()
+	menuService := service.NewMenuService(menuRepository, geminiService)
 	menuController := controller.NewMenuController(menuService)
 
 	// 3. Router
 	r := gin.Default()
+	r.TrustedPlatform = gin.PlatformFlyIO
 
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/docs/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	r.GET("/", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{
+			"message":       "Welcome to Menu Catalog API",
+			"status":        "running",
+			"documentation": "/docs/index.html",
+		})
+	})
 
 	api := r.Group("/menu")
 	{
@@ -64,7 +79,7 @@ func main() {
 
 		// AI Routes
 		api.POST("/generate-description", menuController.GenerateDescription)
-		api.POST("/recommend", menuController.GetRecommendation)
+		api.POST("/recommendations", menuController.GetRecommendations)
 	}
 
 	if err := r.Run(fmt.Sprintf(":%s", port)); err != nil {

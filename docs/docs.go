@@ -5,11 +5,20 @@ import "github.com/swaggo/swag"
 
 const docTemplate = `{
     "schemes": {{ marshal .Schemes }},
+    "consumes": [
+        "application/json"
+    ],
+    "produces": [
+        "application/json"
+    ],
     "swagger": "2.0",
     "info": {
         "description": "{{escape .Description}}",
         "title": "{{.Title}}",
-        "contact": {},
+        "contact": {
+            "name": "Atalariq (Author)",
+            "email": "atalariq.dev@outlook.com"
+        },
         "version": "{{.Version}}"
     },
     "host": "{{.Host}}",
@@ -126,7 +135,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/menu/ai/generate-description": {
+        "/menu/generate-description": {
             "post": {
                 "description": "Use Gemini AI to create a marketing description based on name and ingredients",
                 "consumes": [
@@ -180,7 +189,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "menu"
+                    "ai"
                 ],
                 "summary": "Group menus by category",
                 "parameters": [
@@ -209,7 +218,7 @@ const docTemplate = `{
                 }
             }
         },
-        "/menu/recommend": {
+        "/menu/recommendations": {
             "post": {
                 "description": "Get menu recommendations based on user preference using Gemini AI",
                 "consumes": [
@@ -445,9 +454,9 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
-	Host:             "localhost:8080",
+	Host:             "atalariq-menu-api.fly.dev",
 	BasePath:         "/",
-	Schemes:          []string{},
+	Schemes:          []string{"http", "https"},
 	Title:            "Menu API",
 	Description:      "API for Menu Management",
 	InfoInstanceName: "swagger",

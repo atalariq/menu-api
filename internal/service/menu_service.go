@@ -3,41 +3,49 @@ package service
 
 import (
 	"errors"
-	"fmt"
-	"log"
-	"os"
 
 	"atalariq/menu-api/internal/model"
 	"atalariq/menu-api/internal/repository"
-	"context"
-	"strings"
-
-	"github.com/google/generative-ai-go/genai"
-	"google.golang.org/api/option"
 )
 
 type MenuService interface {
 	Create(input model.Menu) (model.Menu, error)
 	GetList(filter model.MenuFilter) (model.PaginationResponse, error)
-	GetDetail(id uint) (model.Menu, error)
+	GetDetail(id uint) (model.MenuResponse, error)
 	Update(id uint, input model.Menu) (model.Menu, error)
 	Delete(id uint) error
-	GetGrouped(mode string, limit int) (interface{}, error)
-	GenerateDescriptionAI(name string, ingredients []string) (string, error)
-	GetRecommendationAI(userPreference string) (string, error)
+	GetGrouped(mode string, limit int) (any, error)
+
+	// Add bridge to access `ai_service.go` methods
+	GenerateDescription(name string, ingredients []string) (string, error)
+	GetRecommendations(request model.RecommendationRequest) ([]model.RecommendationResponse, error)
 }
 
 type menuService struct {
 	repo repository.MenuRepository
+	ai   AIService
 }
 
-func NewMenuService(repo repository.MenuRepository) MenuService {
-	return &menuService{repo}
+func NewMenuService(repo repository.MenuRepository, ai AIService) MenuService {
+	return &menuService{
+		repo: repo,
+		ai:   ai,
+	}
 }
 
 func (s *menuService) Create(input model.Menu) (model.Menu, error) {
 	if input.Price < 0 {
 		return model.Menu{}, errors.New("price cannot be negative")
+	}
+
+	// Use AI to generate description automatically
+	if input.Description == "" {
+		desc, err := s.ai.GenerateDescription(input.Name, input.Ingredients)
+		if err == nil {
+			input.Description = desc
+		} else { // Fallback if AI throw error
+			input.Description = "Delicious " + input.Name
+		}
 	}
 	err := s.repo.Create(&input)
 	return input, err
@@ -51,13 +59,28 @@ func (s *menuService) GetList(filter model.MenuFilter) (model.PaginationResponse
 		filter.PerPage = 10
 	}
 
-	data, pagination, err := s.repo.FindAll(filter)
-	pagination.Data = data
+	menus, pagination, err := s.repo.FindAll(filter)
+
+	if err != nil {
+		return model.PaginationResponse{}, err
+	}
+
+	var menuResponses []model.MenuResponse
+	for _, m := range menus {
+		menuResponses = append(menuResponses, m.ToResponse())
+	}
+
+	pagination.Data = menuResponses
 	return pagination, err
 }
 
-func (s *menuService) GetDetail(id uint) (model.Menu, error) {
-	return s.repo.FindByID(id)
+func (s *menuService) GetDetail(id uint) (model.MenuResponse, error) {
+	menu, err := s.repo.FindByID(id)
+	if err != nil {
+		return model.MenuResponse{}, err
+	}
+	// Konversi sebelum return
+	return menu.ToResponse(), nil
 }
 
 func (s *menuService) Update(id uint, input model.Menu) (model.Menu, error) {
@@ -73,6 +96,7 @@ func (s *menuService) Update(id uint, input model.Menu) (model.Menu, error) {
 	existing.Category = input.Category
 	existing.Description = input.Description
 	existing.Ingredients = input.Ingredients
+	existing.UpdatedAt = input.UpdatedAt
 
 	err = s.repo.Update(&existing)
 	return existing, err
@@ -86,108 +110,39 @@ func (s *menuService) Delete(id uint) error {
 	return s.repo.Delete(id)
 }
 
-func (s *menuService) GetGrouped(mode string, limit int) (interface{}, error) {
+func (s *menuService) GetGrouped(mode string, limit int) (any, error) {
 	return s.repo.GroupBy(mode, limit)
 }
 
-// Helper function
-func (s *menuService) callGemini(prompt string) (string, error) {
-	ctx := context.Background()
-
-	// Get API Keys from env variable
-	apiKey := os.Getenv("GEMINI_API_KEY")
-	if apiKey == "" {
-		log.Fatal("API_KEY not set in environment")
-	}
-
-	// Setup client
-	client, err := genai.NewClient(ctx, option.WithAPIKey(apiKey))
-	if err != nil {
-		return "", err
-	}
-	defer client.Close()
-
-	// Use Gemini flash model
-	model := client.GenerativeModel("gemini-2.0-flash")
-
-	// Generate content based on given prompt
-	resp, err := model.GenerateContent(ctx, genai.Text(prompt))
-	if err != nil {
-		return "", err
-	}
-
-	if len(resp.Candidates) == 0 || len(resp.Candidates[0].Content.Parts) == 0 {
-		return "", errors.New("empty response from AI")
-	}
-
-	// Extract and clean up text
-	if textPart, ok := resp.Candidates[0].Content.Parts[0].(genai.Text); ok {
-		cleanText := strings.TrimSpace(string(textPart))
-		cleanText = strings.Trim(cleanText, "\"")
-
-		return cleanText, nil
-	}
-
-	return "", errors.New("unexpected response format")
+func (s *menuService) GenerateDescription(name string, ingredients []string) (string, error) {
+	return s.ai.GenerateDescription(name, ingredients)
 }
 
-func (s *menuService) GenerateDescriptionAI(name string, ingredients []string) (string, error) {
-	prompt := fmt.Sprintf(`
-		Role: Senior Culinary Copywriter.
-		Task: Write a menu description for "%s".
-
-		Ingredients: %s.
-
-		Constraints:
-		1. Focus on SENSORY details (texture, temperature, specific flavor notes).
-		2. Do NOT use generic words like "delicious", "yummy", or "tasty".
-		3. Keep it under 20 words.
-		4. Language: English (Elegant & Appetizing).
-
-		Output example: "Silky steamed milk meets robust espresso, finished with a touch of caramelized sweetness."
-
-		Result without any intro or chit-chat:
-		`, name, strings.Join(ingredients, ", "))
-	return s.callGemini(prompt)
-}
-
-func (s *menuService) GetRecommendationAI(userPreference string) (string, error) {
-	// Get menu data from datas (context)
+func (s *menuService) GetRecommendations(request model.RecommendationRequest) ([]model.RecommendationResponse, error) {
 	menus, _, err := s.repo.FindAll(model.MenuFilter{PerPage: 100})
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	var menuListBuilder strings.Builder
+	rawRecommendations, err := s.ai.GetRecommendations(request, menus)
+	if err != nil {
+		return nil, err
+	}
+
+	menuMap := make(map[string]model.Menu)
 	for _, m := range menus {
-		menuListBuilder.WriteString(fmt.Sprintf("- Name: %s | Price: %.0f | Category: %s | Ingredients: %s | Desc: %s\n",
-			m.Name, m.Price, m.Category, strings.Join(m.Ingredients, ", "), m.Description))
+		menuMap[m.Name] = m
 	}
 
-	// Prompting
-	prompt := fmt.Sprintf(`
-		Role: Strict Menu Recommendation Engine.
-    
-    Context:
-    Menu Data: %s
-    User Request: "%s"
+	var finalRecommendations []model.RecommendationResponse
+	for _, raw := range rawRecommendations {
+		if originalMenu, exists := menuMap[raw.MenuName]; exists {
+			finalRecommendations = append(finalRecommendations, model.RecommendationResponse{
+				Menu:   originalMenu.ToResponse(),
+				Reason: raw.Reason,
+			})
+		}
+	}
 
-    Task: Recommend 1-2 items based on the user request and menu data.
-    
-    STRICT OUTPUT RULES:
-    1. Direct answer ONLY. Do NOT start with "Okay", "Here are", "I understand".
-    2. Do NOT use markdown bolding (**).
-    3. Format: [Menu Name] - [Benefit in 1 sentence]
-    4. Use Menu Data as source of informations. If no match found, output: "No suitable recommendation."
-		5. Avoid hallucination, always remember point 4.
-
-    Example Output:
-    Es Kopi Susu - The caffeine kick you need to wake up immediately.
-    Americano - Zero sugar option for a pure energy boost.
-
-		Result without any intro or chit-chat:
-		`, menuListBuilder.String(), userPreference)
-
-	// Return AI Response
-	return s.callGemini(prompt)
+	return finalRecommendations, nil
 }
