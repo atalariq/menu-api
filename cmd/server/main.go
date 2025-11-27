@@ -16,7 +16,7 @@ import (
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"gorm.io/driver/sqlite"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
@@ -38,14 +38,18 @@ func main() {
 	}
 
 	// 1. DB Connection
-	dbPath := os.Getenv("DB_PATH")
-	if dbPath == "" {
-		dbPath = "menu.db" // Fallback untuk local development
+	dsn := os.Getenv("DATABASE_URL")
+	if dsn == "" {
+		dsn = "host=localhost user=postgres password=pg123 dbname=menu_api port=5432 sslmode=disable TimeZone=Asia/Jakarta"
 	}
-	db, _ := gorm.Open(sqlite.Open(dbPath), &gorm.Config{})
+
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Failed to connect to PostgreSQL:", err)
+	}
 
 	if err := db.AutoMigrate(&model.Menu{}); err != nil {
-		log.Fatal("Failed to migrate database scheme:", err)
+		log.Fatal("Migration failed:", err)
 	}
 
 	// 2. Dependency Injection

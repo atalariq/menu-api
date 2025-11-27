@@ -5,7 +5,9 @@ default:
 
 # Run the application
 run:
-  GIN_MODE=debug go run cmd/server/main.go
+  DATABASE_URL="host=localhost user=postgres password=pg123 dbname=menu_api port=5432 sslmode=disable" \
+  GIN_MODE=debug \
+    go run cmd/server/main.go
 
 # Generate Swagger Docs
 docs:
