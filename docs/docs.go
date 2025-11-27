@@ -5,12 +5,6 @@ import "github.com/swaggo/swag"
 
 const docTemplate = `{
     "schemes": {{ marshal .Schemes }},
-    "consumes": [
-        "application/json"
-    ],
-    "produces": [
-        "application/json"
-    ],
     "swagger": "2.0",
     "info": {
         "description": "{{escape .Description}}",
@@ -26,21 +20,15 @@ const docTemplate = `{
     "paths": {
         "/menu": {
             "get": {
-                "description": "Get menu list with pagination, filtering, and sorting",
+                "description": "Get menu list with filtering, sorting, and pagination",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "menu"
                 ],
-                "summary": "List all menus",
+                "summary": "List menus (Browsing)",
                 "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Search by name or description",
-                        "name": "q",
-                        "in": "query"
-                    },
                     {
                         "type": "string",
                         "description": "Filter by category",
@@ -67,7 +55,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Sort by field (e.g., price:asc)",
+                        "description": "Sort (e.g., price:asc)",
                         "name": "sort",
                         "in": "query"
                     },
@@ -88,7 +76,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.PaginationResponse"
+                            "$ref": "#/definitions/model.MenuPaginationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -118,18 +112,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
+                        "description": "Typed Response",
                         "schema": {
-                            "$ref": "#/definitions/model.Menu"
+                            "$ref": "#/definitions/model.MenuSuccessResponse"
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Validation Error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -145,18 +142,17 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ai"
+                    "AI"
                 ],
-                "summary": "Generate Menu Description (AI)",
+                "summary": "Generate Menu Description",
                 "parameters": [
                     {
-                        "description": "JSON input: {name: string, ingredients: []string}",
+                        "description": "Input Data",
                         "name": "input",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.GenerateDescriptionRequest"
                         }
                     }
                 ],
@@ -164,19 +160,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.GenerateDescriptionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input format",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "AI service error",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -189,7 +185,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "ai"
+                    "menu"
                 ],
                 "summary": "Group menus by category",
                 "parameters": [
@@ -203,7 +199,7 @@ const docTemplate = `{
                     {
                         "type": "integer",
                         "description": "Limit item per category (default 5)",
-                        "name": "limit",
+                        "name": "per_category",
                         "in": "query"
                     }
                 ],
@@ -213,6 +209,18 @@ const docTemplate = `{
                         "schema": {
                             "type": "object",
                             "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid mode",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -228,9 +236,9 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "menu"
+                    "AI"
                 ],
-                "summary": "AI Menu Recommendation",
+                "summary": "Get Menu Recommendations",
                 "parameters": [
                     {
                         "description": "User Preference",
@@ -244,21 +252,92 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Typed Response",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.RecommendationListResponse"
                         }
                     },
-                    "500": {
-                        "description": "Internal Server Error",
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "502": {
+                        "description": "AI service unavailable",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/menu/search": {
+            "get": {
+                "description": "Search menu by name or description (Full Text Search intent)",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "menu"
+                ],
+                "summary": "Search menus",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Search keyword (Required)",
+                        "name": "q",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filter by category",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Minimum price",
+                        "name": "min_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "number",
+                        "description": "Maximum price",
+                        "name": "max_price",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Sort (e.g., price:asc)",
+                        "name": "sort",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Page number (default 1)",
+                        "name": "page",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Items per page (default 10)",
+                        "name": "per_page",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.MenuPaginationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -285,19 +364,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Typed Response",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.MenuDetailResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Menu Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -334,19 +415,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "OK",
+                        "description": "Typed Response",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/model.MenuSuccessResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "404": {
-                        "description": "Not Found",
+                        "description": "Menu Not Found",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -373,10 +456,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/model.GeneralResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid ID",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Menu Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     }
                 }
@@ -384,6 +476,49 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "model.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string",
+                    "example": "Invalid input format or ID not found"
+                }
+            }
+        },
+        "model.GeneralResponse": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GenerateDescriptionRequest": {
+            "type": "object",
+            "required": [
+                "ingredients",
+                "name"
+            ],
+            "properties": {
+                "ingredients": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.GenerateDescriptionResponse": {
+            "type": "object",
+            "properties": {
+                "generated_description": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Menu": {
             "type": "object",
             "properties": {
@@ -419,10 +554,23 @@ const docTemplate = `{
                 }
             }
         },
-        "model.PaginationResponse": {
+        "model.MenuDetailResponse": {
             "type": "object",
             "properties": {
-                "data": {},
+                "data": {
+                    "$ref": "#/definitions/model.MenuResponse"
+                }
+            }
+        },
+        "model.MenuPaginationResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.MenuResponse"
+                    }
+                },
                 "page": {
                     "type": "integer"
                 },
@@ -437,6 +585,57 @@ const docTemplate = `{
                 }
             }
         },
+        "model.MenuResponse": {
+            "type": "object",
+            "properties": {
+                "calories": {
+                    "type": "integer"
+                },
+                "category": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "ingredients": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "name": {
+                    "type": "string"
+                },
+                "price": {
+                    "type": "number"
+                }
+            }
+        },
+        "model.MenuSuccessResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "$ref": "#/definitions/model.Menu"
+                },
+                "message": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.RecommendationListResponse": {
+            "type": "object",
+            "properties": {
+                "data": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.RecommendationResponse"
+                    }
+                }
+            }
+        },
         "model.RecommendationRequest": {
             "type": "object",
             "required": [
@@ -444,6 +643,17 @@ const docTemplate = `{
             ],
             "properties": {
                 "preference": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.RecommendationResponse": {
+            "type": "object",
+            "properties": {
+                "menu": {
+                    "$ref": "#/definitions/model.MenuResponse"
+                },
+                "reason": {
                     "type": "string"
                 }
             }
@@ -456,9 +666,9 @@ var SwaggerInfo = &swag.Spec{
 	Version:          "1.0",
 	Host:             "atalariq-menu-api.fly.dev",
 	BasePath:         "/",
-	Schemes:          []string{"http", "https"},
+	Schemes:          []string{},
 	Title:            "Menu API",
-	Description:      "API for Menu Management",
+	Description:      "API for restaurant menu catalogs management",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",

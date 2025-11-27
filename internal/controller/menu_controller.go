@@ -20,15 +20,17 @@ func NewMenuController(service service.MenuService) *MenuController {
 }
 
 // Create godoc
-// @Summary      Create a new menu
+//
+// @Summary    Create a new menu
 // @Description  Create a new menu item with ingredients
-// @Tags         menu
-// @Accept       json
-// @Produce      json
-// @Param        menu body model.Menu true "Menu Request"
-// @Success      201  {object}  model.Menu
-// @Failure      400  {object}  map[string]string
-// @Router       /menu [post]
+// @Tags     menu
+// @Accept     json
+// @Produce    json
+// @Param      menu  body    model.Menu          true  "Menu Request"
+// @Success    201   {object}  model.MenuSuccessResponse "Typed Response"
+// @Failure    400  {object}  model.ErrorResponse  "Validation Error"
+// @Failure    500  {object}  model.ErrorResponse  "Server Error"
+// @Router     /menu [post]
 func (c *MenuController) Create(ctx *gin.Context) {
 	var input model.Menu
 	if err := ctx.ShouldBindJSON(&input); err != nil {
@@ -48,37 +50,37 @@ func (c *MenuController) Create(ctx *gin.Context) {
 	})
 }
 
-// FindAll godoc
-// @Summary      List all menus
-// @Description  Get menu list with pagination, filtering, and sorting
+// GetList godoc
+// @Summary      List menus (Browsing)
+// @Description  Get menu list with filtering, sorting, and pagination
 // @Tags         menu
 // @Produce      json
-// @Param        q query string false "Search by name or description"
-// @Param        category query string false "Filter by category"
-// @Param        min_price query number false "Minimum price"
-// @Param        max_price query number false "Maximum price"
-// @Param        max_cal query int false "Maximum calories"
-// @Param        sort query string false "Sort by field (e.g., price:asc)"
-// @Param        page query int false "Page number (default 1)"
-// @Param        per_page query int false "Items per page (default 10)"
-// @Success      200  {object}  model.PaginationResponse
+// @Param        category   query     string  false  "Filter by category"
+// @Param        min_price  query     number  false  "Minimum price"
+// @Param        max_price  query     number  false  "Maximum price"
+// @Param        max_cal    query     int     false  "Maximum calories"
+// @Param        sort       query     string  false  "Sort (e.g., price:asc)"
+// @Param        page       query     int     false  "Page number (default 1)"
+// @Param        per_page   query     int     false  "Items per page (default 10)"
+// @Success      200        {object}  model.MenuPaginationResponse
+// @Failure      400        {object}  model.ErrorResponse
 // @Router       /menu [get]
-func (c *MenuController) FindAll(ctx *gin.Context) {
-	page, _ := strconv.Atoi(ctx.DefaultQuery("page", "1"))
-	perPage, _ := strconv.Atoi(ctx.DefaultQuery("per_page", "10"))
-	minPrice, _ := strconv.ParseFloat(ctx.Query("min_price"), 64)
-	maxPrice, _ := strconv.ParseFloat(ctx.Query("max_price"), 64)
-	maxCal, _ := strconv.Atoi(ctx.Query("max_cal"))
+func (c *MenuController) GetList(ctx *gin.Context) {
+	var params model.MenuQueryRequest
+
+	if err := ctx.ShouldBindQuery(&params); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
 
 	filter := model.MenuFilter{
-		Query:    ctx.Query("q"),
-		Category: ctx.Query("category"),
-		MinPrice: minPrice,
-		MaxPrice: maxPrice,
-		MaxCal:   maxCal,
-		Sort:     ctx.Query("sort"),
-		Page:     page,
-		PerPage:  perPage,
+		Category: params.Category,
+		MinPrice: params.MinPrice,
+		MaxPrice: params.MaxPrice,
+		MaxCal:   params.MaxCal,
+		Sort:     params.Sort,
+		Page:     params.Page,
+		PerPage:  params.PerPage,
 	}
 
 	result, err := c.service.GetList(filter)
@@ -87,19 +89,67 @@ func (c *MenuController) FindAll(ctx *gin.Context) {
 		return
 	}
 
-	// Langsung return struct PaginationResponse agar format JSON sesuai standar
+	ctx.JSON(http.StatusOK, result)
+}
+
+// Search godoc
+// @Summary      Search menus
+// @Description  Search menu by name or description (Full Text Search intent)
+// @Tags         menu
+// @Produce      json
+// @Param        q          query     string  true   "Search keyword (Required)"
+// @Param        category   query     string  false  "Filter by category"
+// @Param        min_price  query     number  false  "Minimum price"
+// @Param        max_price  query     number  false  "Maximum price"
+// @Param        sort       query     string  false  "Sort (e.g., price:asc)"
+// @Param        page       query     int     false  "Page number (default 1)"
+// @Param        per_page   query     int     false  "Items per page (default 10)"
+// @Success      200        {object}  model.MenuPaginationResponse
+// @Failure      400        {object}  model.ErrorResponse
+// @Router       /menu/search [get]
+func (c *MenuController) Search(ctx *gin.Context) {
+	var params model.MenuQueryRequest
+
+	if err := ctx.ShouldBindQuery(&params); err != nil {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	if params.Q == "" {
+		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Query param 'q' is required for search"})
+		return
+	}
+
+	filter := model.MenuFilter{
+		Query:    params.Q,
+		Category: params.Category,
+		MinPrice: params.MinPrice,
+		MaxPrice: params.MaxPrice,
+		Sort:     params.Sort,
+		Page:     params.Page,
+		PerPage:  params.PerPage,
+	}
+
+	result, err := c.service.GetList(filter)
+	if err != nil {
+		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
 	ctx.JSON(http.StatusOK, result)
 }
 
 // GetByID godoc
-// @Summary      Get menu detail
+//
+// @Summary    Get menu detail
 // @Description  Get details of a specific menu item by ID
-// @Tags         menu
-// @Produce      json
-// @Param        id   path      int  true  "Menu ID"
-// @Success      200  {object}  map[string]any
-// @Failure      404  {object}  map[string]string
-// @Router       /menu/{id} [get]
+// @Tags     menu
+// @Produce    json
+// @Param      id  path    int             true  "Menu ID"
+// @Success    200 {object}  model.MenuDetailResponse  "Typed Response"
+// @Failure    400 {object}  model.ErrorResponse  "Invalid ID"
+// @Failure    404 {object}  model.ErrorResponse  "Menu Not Found"
+// @Router     /menu/{id} [get]
 func (c *MenuController) GetByID(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -118,16 +168,18 @@ func (c *MenuController) GetByID(ctx *gin.Context) {
 }
 
 // Update godoc
-// @Summary      Update menu
+//
+// @Summary    Update menu
 // @Description  Update an existing menu item
-// @Tags         menu
-// @Accept       json
-// @Produce      json
-// @Param        id   path      int  true  "Menu ID"
-// @Param        menu body model.Menu true "Update Data"
-// @Success      200  {object}  map[string]any
-// @Failure      404  {object}  map[string]string
-// @Router       /menu/{id} [put]
+// @Tags     menu
+// @Accept     json
+// @Produce    json
+// @Param      id    path      int             true  "Menu ID"
+// @Param      menu  body      model.Menu          true  "Update Data"
+// @Success    200   {object}  model.MenuSuccessResponse "Typed Response"
+// @Failure    400   {object}  model.ErrorResponse  "Invalid ID"
+// @Failure    404   {object}  model.ErrorResponse  "Menu Not Found"
+// @Router     /menu/{id} [put]
 func (c *MenuController) Update(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -154,13 +206,16 @@ func (c *MenuController) Update(ctx *gin.Context) {
 }
 
 // Delete godoc
-// @Summary      Delete menu
+//
+// @Summary    Delete menu
 // @Description  Delete a menu item by ID
-// @Tags         menu
-// @Produce      json
-// @Param        id   path      int  true  "Menu ID"
-// @Success      200  {object}  map[string]string
-// @Router       /menu/{id} [delete]
+// @Tags     menu
+// @Produce    json
+// @Param      id  path    int true  "Menu ID"
+// @Success    200 {object}  model.GeneralResponse
+// @Failure    400   {object}  model.ErrorResponse  "Invalid ID"
+// @Failure    404   {object}  model.ErrorResponse  "Menu Not Found"
+// @Router     /menu/{id} [delete]
 func (c *MenuController) Delete(ctx *gin.Context) {
 	id, err := strconv.Atoi(ctx.Param("id"))
 	if err != nil {
@@ -177,18 +232,21 @@ func (c *MenuController) Delete(ctx *gin.Context) {
 }
 
 // GroupByCategory godoc
-// @Summary      Group menus by category
+//
+// @Summary    Group menus by category
 // @Description  Get menu counts or lists grouped by category
-// @Tags         ai
-// @Produce      json
-// @Param        mode query string true "Mode: 'count' or 'list'"
-// @Param        limit query int false "Limit item per category (default 5)"
-// @Success      200  {object}  map[string]any
-// @Router       /menu/group-by-category [get]
+// @Tags     menu
+// @Produce    json
+// @Param      mode      query   string  true  "Mode: 'count' or 'list'"
+// @Param      per_category  query   int   false "Limit item per category (default 5)"
+// @Success    200       {object}  map[string]any
+// @Failure    400  {object}  model.ErrorResponse  "Invalid mode"
+// @Failure    500  {object}  model.ErrorResponse  "Server Error"
+// @Router     /menu/group-by-category [get]
 func (c *MenuController) GroupByCategory(ctx *gin.Context) {
-	limit, err := strconv.Atoi(ctx.Query("per_category"))
+	limitPerCategory, err := strconv.Atoi(ctx.Query("per_category"))
 	if err != nil {
-		limit = 5
+		limitPerCategory = 5
 	}
 
 	mode := ctx.Query("mode")
@@ -197,7 +255,7 @@ func (c *MenuController) GroupByCategory(ctx *gin.Context) {
 		return
 	}
 
-	result, err := c.service.GetGrouped(mode, limit)
+	result, err := c.service.GetGrouped(mode, limitPerCategory)
 	if err != nil {
 		ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -207,20 +265,19 @@ func (c *MenuController) GroupByCategory(ctx *gin.Context) {
 }
 
 // GenerateDescriptionAI godoc
-// @Summary      Generate Menu Description (AI)
+//
+// @Summary    Generate Menu Description
 // @Description  Use Gemini AI to create a marketing description based on name and ingredients
-// @Tags         ai
-// @Accept       json
-// @Produce      json
-// @Param        input body map[string]any true "JSON input: {name: string, ingredients: []string}"
-// @Success      200  {object}  map[string]string
-// @Failure      500  {object}  map[string]string
-// @Router       /menu/generate-description [post]
+// @Tags       AI
+// @Accept     json
+// @Produce    json
+// @Param      input body      model.GenerateDescriptionRequest  true  "Input Data"
+// @Success    200   {object}  model.GenerateDescriptionResponse
+// @Failure    400   {object}  model.ErrorResponse  "Invalid input format"
+// @Failure    500   {object}  model.ErrorResponse  "AI service error"
+// @Router     /menu/generate-description [post]
 func (c *MenuController) GenerateDescription(ctx *gin.Context) {
-	var input struct {
-		Name        string   `json:"name"`
-		Ingredients []string `json:"ingredients"`
-	}
+	var input model.GenerateDescriptionRequest
 	if err := ctx.ShouldBindJSON(&input); err != nil {
 		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Invalid input format"})
 		return
@@ -238,15 +295,17 @@ func (c *MenuController) GenerateDescription(ctx *gin.Context) {
 }
 
 // GetRecommendations godoc
-// @Summary      AI Menu Recommendation
+//
+// @Summary      Get Menu Recommendations
 // @Description  Get menu recommendations based on user preference using Gemini AI
-// @Tags         menu
-// @Accept       json
-// @Produce      json
-// @Param        request body model.RecommendationRequest true "User Preference"
-// @Success      200  {object}  map[string]string
-// @Failure      500  {object}  map[string]string
-// @Router       /menu/recommendations [post]
+// @Tags       AI
+// @Accept     json
+// @Produce    json
+// @Param      request body    model.RecommendationRequest     true  "User Preference"
+// @Success    200   {object}  model.RecommendationListResponse  "Typed Response"
+// @Failure    400  {object}  model.ErrorResponse
+// @Failure    502  {object}  model.ErrorResponse  "AI service unavailable"
+// @Router     /menu/recommendations [post]
 func (c *MenuController) GetRecommendations(ctx *gin.Context) {
 	var request model.RecommendationRequest
 	if err := ctx.ShouldBindJSON(&request); err != nil {

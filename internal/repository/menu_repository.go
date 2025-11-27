@@ -14,7 +14,7 @@ import (
 
 type MenuRepository interface {
 	Create(menu *model.Menu) error
-	FindAll(filter model.MenuFilter) ([]model.Menu, model.PaginationResponse, error)
+	FindAll(filter model.MenuFilter) ([]model.Menu, model.MenuPaginationResponse, error)
 	FindByID(id uint) (model.Menu, error)
 	Update(menu *model.Menu) error
 	Delete(id uint) error
@@ -33,7 +33,7 @@ func (r *menuRepository) Create(menu *model.Menu) error {
 	return r.db.Create(menu).Error
 }
 
-func (r *menuRepository) FindAll(filter model.MenuFilter) ([]model.Menu, model.PaginationResponse, error) {
+func (r *menuRepository) FindAll(filter model.MenuFilter) ([]model.Menu, model.MenuPaginationResponse, error) {
 	var menus []model.Menu
 	var total int64
 
@@ -76,7 +76,7 @@ func (r *menuRepository) FindAll(filter model.MenuFilter) ([]model.Menu, model.P
 	err := db.Find(&menus).Error
 
 	totalPages := int(math.Ceil(float64(total) / float64(filter.PerPage)))
-	pagination := model.PaginationResponse{
+	pagination := model.MenuPaginationResponse{
 		Total:      total,
 		Page:       filter.Page,
 		PerPage:    filter.PerPage,

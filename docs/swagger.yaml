@@ -1,7 +1,33 @@
 basePath: /
-consumes:
-- application/json
 definitions:
+  model.ErrorResponse:
+    properties:
+      error:
+        example: Invalid input format or ID not found
+        type: string
+    type: object
+  model.GeneralResponse:
+    properties:
+      message:
+        type: string
+    type: object
+  model.GenerateDescriptionRequest:
+    properties:
+      ingredients:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+    required:
+    - ingredients
+    - name
+    type: object
+  model.GenerateDescriptionResponse:
+    properties:
+      generated_description:
+        type: string
+    type: object
   model.Menu:
     properties:
       calories:
@@ -25,9 +51,17 @@ definitions:
       updated_at:
         type: string
     type: object
-  model.PaginationResponse:
+  model.MenuDetailResponse:
     properties:
-      data: {}
+      data:
+        $ref: '#/definitions/model.MenuResponse'
+    type: object
+  model.MenuPaginationResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.MenuResponse'
+        type: array
       page:
         type: integer
       per_page:
@@ -37,6 +71,39 @@ definitions:
       total_pages:
         type: integer
     type: object
+  model.MenuResponse:
+    properties:
+      calories:
+        type: integer
+      category:
+        type: string
+      description:
+        type: string
+      id:
+        type: integer
+      ingredients:
+        items:
+          type: string
+        type: array
+      name:
+        type: string
+      price:
+        type: number
+    type: object
+  model.MenuSuccessResponse:
+    properties:
+      data:
+        $ref: '#/definitions/model.Menu'
+      message:
+        type: string
+    type: object
+  model.RecommendationListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.RecommendationResponse'
+        type: array
+    type: object
   model.RecommendationRequest:
     properties:
       preference:
@@ -44,23 +111,26 @@ definitions:
     required:
     - preference
     type: object
+  model.RecommendationResponse:
+    properties:
+      menu:
+        $ref: '#/definitions/model.MenuResponse'
+      reason:
+        type: string
+    type: object
 host: atalariq-menu-api.fly.dev
 info:
   contact:
     email: atalariq.dev@outlook.com
     name: Atalariq (Author)
-  description: API for Menu Management
+  description: API for restaurant menu catalogs management
   title: Menu API
   version: "1.0"
 paths:
   /menu:
     get:
-      description: Get menu list with pagination, filtering, and sorting
+      description: Get menu list with filtering, sorting, and pagination
       parameters:
-      - description: Search by name or description
-        in: query
-        name: q
-        type: string
       - description: Filter by category
         in: query
         name: category
@@ -77,7 +147,7 @@ paths:
         in: query
         name: max_cal
         type: integer
-      - description: Sort by field (e.g., price:asc)
+      - description: Sort (e.g., price:asc)
         in: query
         name: sort
         type: string
@@ -95,8 +165,12 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.PaginationResponse'
-      summary: List all menus
+            $ref: '#/definitions/model.MenuPaginationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: List menus (Browsing)
       tags:
       - menu
     post:
@@ -114,15 +188,17 @@ paths:
       - application/json
       responses:
         "201":
-          description: Created
+          description: Typed Response
           schema:
-            $ref: '#/definitions/model.Menu'
+            $ref: '#/definitions/model.MenuSuccessResponse'
         "400":
-          description: Bad Request
+          description: Validation Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Create a new menu
       tags:
       - menu
@@ -141,9 +217,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.GeneralResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "404":
+          description: Menu Not Found
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Delete menu
       tags:
       - menu
@@ -159,16 +241,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Typed Response
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.MenuDetailResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
-          description: Not Found
+          description: Menu Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Get menu detail
       tags:
       - menu
@@ -192,16 +275,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: OK
+          description: Typed Response
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.MenuSuccessResponse'
+        "400":
+          description: Invalid ID
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
-          description: Not Found
+          description: Menu Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Update menu
       tags:
       - menu
@@ -212,31 +296,30 @@ paths:
       description: Use Gemini AI to create a marketing description based on name and
         ingredients
       parameters:
-      - description: 'JSON input: {name: string, ingredients: []string}'
+      - description: Input Data
         in: body
         name: input
         required: true
         schema:
-          additionalProperties: true
-          type: object
+          $ref: '#/definitions/model.GenerateDescriptionRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
+            $ref: '#/definitions/model.GenerateDescriptionResponse'
+        "400":
+          description: Invalid input format
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Generate Menu Description (AI)
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: AI service error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Generate Menu Description
       tags:
-      - ai
+      - AI
   /menu/group-by-category:
     get:
       description: Get menu counts or lists grouped by category
@@ -248,7 +331,7 @@ paths:
         type: string
       - description: Limit item per category (default 5)
         in: query
-        name: limit
+        name: per_category
         type: integer
       produces:
       - application/json
@@ -258,9 +341,17 @@ paths:
           schema:
             additionalProperties: true
             type: object
+        "400":
+          description: Invalid mode
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Group menus by category
       tags:
-      - ai
+      - menu
   /menu/recommendations:
     post:
       consumes:
@@ -278,23 +369,65 @@ paths:
       - application/json
       responses:
         "200":
+          description: Typed Response
+          schema:
+            $ref: '#/definitions/model.RecommendationListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "502":
+          description: AI service unavailable
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Get Menu Recommendations
+      tags:
+      - AI
+  /menu/search:
+    get:
+      description: Search menu by name or description (Full Text Search intent)
+      parameters:
+      - description: Search keyword (Required)
+        in: query
+        name: q
+        required: true
+        type: string
+      - description: Filter by category
+        in: query
+        name: category
+        type: string
+      - description: Minimum price
+        in: query
+        name: min_price
+        type: number
+      - description: Maximum price
+        in: query
+        name: max_price
+        type: number
+      - description: Sort (e.g., price:asc)
+        in: query
+        name: sort
+        type: string
+      - description: Page number (default 1)
+        in: query
+        name: page
+        type: integer
+      - description: Items per page (default 10)
+        in: query
+        name: per_page
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
+            $ref: '#/definitions/model.MenuPaginationResponse'
+        "400":
+          description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: AI Menu Recommendation
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Search menus
       tags:
       - menu
-produces:
-- application/json
-schemes:
-- http
-- https
 swagger: "2.0"

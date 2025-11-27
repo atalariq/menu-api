@@ -20,16 +20,13 @@ import (
 	"gorm.io/gorm"
 )
 
-// @title           Menu API
-// @version         1.0
-// @description     API for Menu Management
-// @host            atalariq-menu-api.fly.dev
-// @BasePath        /
-// @schemes         http https
-// @accept          json
-// @produce         json
-// @contact.name    Atalariq (Author)
-// @contact.email   atalariq.dev@outlook.com
+// @title         Menu API
+// @version       1.0
+// @description   API for restaurant menu catalogs management
+// @host          atalariq-menu-api.fly.dev
+// @BasePath      /
+// @contact.name  Atalariq (Author)
+// @contact.email atalariq.dev@outlook.com
 func main() {
 	port := os.Getenv("PORT")
 
@@ -40,7 +37,7 @@ func main() {
 	// 1. DB Connection
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
-		dsn = "host=localhost user=postgres password=pg123 dbname=menu_api port=5432 sslmode=disable TimeZone=Asia/Jakarta"
+		log.Fatal("DATABASE_URL is empty!")
 	}
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
@@ -74,12 +71,12 @@ func main() {
 	api := r.Group("/menu")
 	{
 		api.POST("", menuController.Create)
-		api.GET("", menuController.FindAll)
+		api.GET("", menuController.GetList)
 		api.GET("/:id", menuController.GetByID)
 		api.PUT("/:id", menuController.Update)
 		api.DELETE("/:id", menuController.Delete)
 		api.GET("/group-by-category", menuController.GroupByCategory)
-		api.GET("/search", menuController.FindAll)
+		api.GET("/search", menuController.Search)
 
 		// AI Routes
 		api.POST("/generate-description", menuController.GenerateDescription)

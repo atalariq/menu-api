@@ -16,3 +16,16 @@ type RecommendationResponse struct {
 	Menu   MenuResponse `json:"menu"`
 	Reason string       `json:"reason"`
 }
+
+type RecommendationListResponse struct {
+	Data []RecommendationResponse `json:"data"`
+}
+
+type GenerateDescriptionRequest struct {
+	Name        string   `json:"name" binding:"required"`
+	Ingredients []string `json:"ingredients" binding:"required"`
+}
+
+type GenerateDescriptionResponse struct {
+	Description string `json:"generated_description"`
+}

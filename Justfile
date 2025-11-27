@@ -19,7 +19,6 @@ test:
 
 # Clean build files
 clean:
-  rm -f menu.db
   rm -rf docs
 
 # Run clean > docs > run in single command 

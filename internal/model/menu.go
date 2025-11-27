@@ -39,6 +39,26 @@ func (m *Menu) ToResponse() MenuResponse {
 	}
 }
 
+type MenuSuccessResponse struct {
+	Message string `json:"message"`
+	Data    Menu   `json:"data"`
+}
+
+type MenuDetailResponse struct {
+	Data MenuResponse `json:"data"`
+}
+
+type MenuQueryRequest struct {
+	Q        string  `form:"q"`
+	Category string  `form:"category"`
+	MinPrice float64 `form:"min_price"`
+	MaxPrice float64 `form:"max_price"`
+	MaxCal   int     `form:"max_cal"`
+	Sort     string  `form:"sort"`
+	Page     int     `form:"page,default=1"`
+	PerPage  int     `form:"per_page,default=10"`
+}
+
 // MenuFilter stores search paramter from query param
 type MenuFilter struct {
 	Query    string
@@ -51,11 +71,11 @@ type MenuFilter struct {
 	PerPage  int
 }
 
-// PaginationResponse helper for output
-type PaginationResponse struct {
-	Total      int64 `json:"total"`
-	Page       int   `json:"page"`
-	PerPage    int   `json:"per_page"`
-	TotalPages int   `json:"total_pages"`
-	Data       any   `json:"data"`
+// MenuPaginationResponse helper for output
+type MenuPaginationResponse struct {
+	Total      int64          `json:"total"`
+	Page       int            `json:"page"`
+	PerPage    int            `json:"per_page"`
+	TotalPages int            `json:"total_pages"`
+	Data       []MenuResponse `json:"data"`
 }

@@ -10,7 +10,7 @@ import (
 
 type MenuService interface {
 	Create(input model.Menu) (model.Menu, error)
-	GetList(filter model.MenuFilter) (model.PaginationResponse, error)
+	GetList(filter model.MenuFilter) (model.MenuPaginationResponse, error)
 	GetDetail(id uint) (model.MenuResponse, error)
 	Update(id uint, input model.Menu) (model.Menu, error)
 	Delete(id uint) error
@@ -51,7 +51,7 @@ func (s *menuService) Create(input model.Menu) (model.Menu, error) {
 	return input, err
 }
 
-func (s *menuService) GetList(filter model.MenuFilter) (model.PaginationResponse, error) {
+func (s *menuService) GetList(filter model.MenuFilter) (model.MenuPaginationResponse, error) {
 	if filter.Page < 1 {
 		filter.Page = 1
 	}
@@ -62,7 +62,7 @@ func (s *menuService) GetList(filter model.MenuFilter) (model.PaginationResponse
 	menus, pagination, err := s.repo.FindAll(filter)
 
 	if err != nil {
-		return model.PaginationResponse{}, err
+		return model.MenuPaginationResponse{}, err
 	}
 
 	var menuResponses []model.MenuResponse
