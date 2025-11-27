@@ -285,10 +285,9 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Search keyword (Required)",
+                        "description": "Search keyword",
                         "name": "q",
-                        "in": "query",
-                        "required": true
+                        "in": "query"
                     },
                     {
                         "type": "string",

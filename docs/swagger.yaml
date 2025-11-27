@@ -387,10 +387,9 @@ paths:
     get:
       description: Search menu by name or description (Full Text Search intent)
       parameters:
-      - description: Search keyword (Required)
+      - description: Search keyword
         in: query
         name: q
-        required: true
         type: string
       - description: Filter by category
         in: query

@@ -97,7 +97,7 @@ func (c *MenuController) GetList(ctx *gin.Context) {
 // @Description  Search menu by name or description (Full Text Search intent)
 // @Tags         menu
 // @Produce      json
-// @Param        q          query     string  true   "Search keyword (Required)"
+// @Param        q          query     string  false   "Search keyword"
 // @Param        category   query     string  false  "Filter by category"
 // @Param        min_price  query     number  false  "Minimum price"
 // @Param        max_price  query     number  false  "Maximum price"
@@ -115,10 +115,11 @@ func (c *MenuController) Search(ctx *gin.Context) {
 		return
 	}
 
-	if params.Q == "" {
-		ctx.JSON(http.StatusBadRequest, gin.H{"error": "Query param 'q' is required for search"})
-		return
-	}
+	// Make param q not mandatory
+	// if params.Q == "" {
+	// 	ctx.JSON(http.StatusBadRequest, gin.H{"error": "Query param 'q' is required for search"})
+	// 	return
+	// }
 
 	filter := model.MenuFilter{
 		Query:    params.Q,
